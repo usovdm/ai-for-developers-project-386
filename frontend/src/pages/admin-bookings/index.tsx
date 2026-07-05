@@ -27,6 +27,7 @@ export function AdminBookingsPage() {
                 <p className="mt-1 text-sm text-slate-600">
                   {booking.guestName} / {booking.guestEmail}
                 </p>
+                {booking.comment ? <p className="mt-1 text-sm text-slate-600">{booking.comment}</p> : null}
               </div>
               <Button variant="danger" onClick={() => deleteMutation.mutate(booking.id)}>
                 Delete

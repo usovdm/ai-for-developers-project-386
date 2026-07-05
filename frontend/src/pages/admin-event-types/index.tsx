@@ -45,12 +45,18 @@ export function AdminEventTypesPage() {
                 Title
               </label>
               <Input id="title" {...form.register("title")} />
+              {form.formState.errors.title ? (
+                <p className="text-sm text-red-600">{form.formState.errors.title.message}</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="description">
                 Description
               </label>
               <Textarea id="description" {...form.register("description")} />
+              {form.formState.errors.description ? (
+                <p className="text-sm text-red-600">{form.formState.errors.description.message}</p>
+              ) : null}
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="durationMinutes">
@@ -77,6 +83,8 @@ export function AdminEventTypesPage() {
       </div>
 
       <div className="space-y-3">
+        {deleteMutation.isError ? <p className="text-sm text-red-600">{getErrorMessage(deleteMutation.error)}</p> : null}
+
         {(eventTypesQuery.data ?? []).map((eventType) => (
           <Card key={eventType.id}>
             <div className="flex flex-wrap items-start justify-between gap-4">
