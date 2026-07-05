@@ -12,6 +12,7 @@ import {
   availabilitySettings,
   bookings,
   buildCalendarSlots,
+  devEmails,
   eventTypes,
   findEventTypeTitle,
   setAvailabilitySettings,
@@ -143,6 +144,13 @@ export const handlers = [
     };
 
     bookings.push(booking);
+    devEmails.unshift({
+      id: crypto.randomUUID(),
+      recipientEmail: booking.guestEmail,
+      subject: `Booking confirmed: ${booking.title}`,
+      body: `${booking.title}\nEvent type: ${booking.eventTypeTitle}\nDate and time: ${booking.startAt} - ${booking.endAt}`,
+      createdAt: new Date().toISOString(),
+    });
 
     return HttpResponse.json(booking, { status: 201 });
   }),
@@ -150,6 +158,16 @@ export const handlers = [
   http.post("*/bookings/:bookingId/deletion-code", async ({ params, request }) => {
     const body = (await request.json()) as RequestDeletionCodeRequest;
     const booking = bookings.find((item) => item.id === params.bookingId && item.guestEmail === body.guestEmail);
+
+    if (booking) {
+      devEmails.unshift({
+        id: crypto.randomUUID(),
+        recipientEmail: body.guestEmail,
+        subject: "Booking deletion code",
+        body: "Your booking deletion code is 000000",
+        createdAt: new Date().toISOString(),
+      });
+    }
 
     return HttpResponse.json(
       { message: booking ? "Deletion code is 000000 in MSW mode" : "If booking exists, a deletion code was sent" },
@@ -169,6 +187,8 @@ export const handlers = [
 
     return new HttpResponse(null, { status: 204 });
   }),
+
+  http.get("*/dev/emails", () => HttpResponse.json(devEmails)),
 
   http.get("*/admin/availability", ({ request }) => {
     const authError = requireAdmin(request);

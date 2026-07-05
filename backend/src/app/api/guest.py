@@ -12,9 +12,11 @@ from app.schemas.bookings import (
     DeletionCodeRequested,
     RequestDeletionCodeRequest,
 )
+from app.schemas.dev_emails import DevEmail
 from app.schemas.event_types import EventType
 from app.services.booking_service import create_booking
 from app.services.calendar_service import list_calendar_slots
+from app.services.dev_email_service import list_dev_emails
 from app.services.email_service import delete_booking_as_guest, request_deletion_code
 from app.services.event_type_service import list_public_event_types
 from app.storage.database import get_session
@@ -62,3 +64,8 @@ def delete_booking(
 ):
     delete_booking_as_guest(session, booking_id, request)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/dev/emails", response_model=List[DevEmail])
+def get_dev_emails(session: Session = Depends(get_session)):
+    return list_dev_emails(session)

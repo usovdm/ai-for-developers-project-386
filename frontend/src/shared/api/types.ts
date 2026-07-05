@@ -85,6 +85,14 @@ export type Booking = {
   createdAt: DateTimeString;
 };
 
+export type DevEmail = {
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+  createdAt: DateTimeString;
+};
+
 export type CreateBookingRequest = {
   eventTypeId: string;
   startAt: DateTimeString;

@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Literal, Optional
 
+from pydantic import field_validator
+
 from app.schemas.base import ApiModel
 
 CalendarSlotStatus = Literal["free", "occupied", "unavailable"]
@@ -44,9 +46,31 @@ class CreateBookingRequest(ApiModel):
     guest_email: str
     comment: Optional[str] = None
 
+    @field_validator("event_type_id", "title", "guest_name", "guest_email")
+    @classmethod
+    def validate_required_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Field is required")
+        return value.strip()
+
+    @field_validator("comment")
+    @classmethod
+    def normalize_comment(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return None
+        stripped = value.strip()
+        return stripped or None
+
 
 class RequestDeletionCodeRequest(ApiModel):
     guest_email: str
+
+    @field_validator("guest_email")
+    @classmethod
+    def validate_guest_email(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Field is required")
+        return value.strip()
 
 
 class DeletionCodeRequested(ApiModel):
@@ -56,3 +80,10 @@ class DeletionCodeRequested(ApiModel):
 class DeleteBookingRequest(ApiModel):
     guest_email: str
     code: str
+
+    @field_validator("guest_email", "code")
+    @classmethod
+    def validate_required_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("Field is required")
+        return value.strip()

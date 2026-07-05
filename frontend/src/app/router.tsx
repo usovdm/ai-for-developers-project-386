@@ -3,6 +3,7 @@ import { AdminAvailabilityPage } from "@/pages/admin-availability";
 import { AdminBookingsPage } from "@/pages/admin-bookings";
 import { AdminEventTypesPage } from "@/pages/admin-event-types";
 import { AdminLoginPage } from "@/pages/admin-login";
+import { DevEmailsPage } from "@/pages/dev-emails";
 import { GuestCalendarPage } from "@/pages/guest-calendar";
 
 function RootLayout() {
@@ -24,6 +25,9 @@ function RootLayout() {
           </Link>
           <Link to="/admin/bookings" activeProps={{ className: "text-blue-600" }}>
             Bookings
+          </Link>
+          <Link to="/dev/emails" activeProps={{ className: "text-blue-600" }}>
+            Dev emails
           </Link>
         </nav>
       </header>
@@ -66,12 +70,19 @@ const adminBookingsRoute = createRoute({
   component: AdminBookingsPage,
 });
 
+const devEmailsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/dev/emails",
+  component: DevEmailsPage,
+});
+
 const routeTree = rootRoute.addChildren([
   guestCalendarRoute,
   adminLoginRoute,
   adminEventTypesRoute,
   adminAvailabilityRoute,
   adminBookingsRoute,
+  devEmailsRoute,
 ]);
 
 export const router = createRouter({ routeTree });

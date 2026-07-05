@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, time
 
 from app.config import get_settings
@@ -21,6 +22,8 @@ def normalize_datetime(value: datetime) -> datetime:
 
 
 def parse_time_of_day(value: str) -> time:
+    if re.fullmatch(r"\d{2}:\d{2}", value) is None:
+        raise ValueError("Time must use HH:mm format")
     return time.fromisoformat(value)
 
 
@@ -33,5 +36,8 @@ def day_name(value: date) -> str:
 
 
 def is_15_minute_step(value: str) -> bool:
-    parsed = parse_time_of_day(value)
+    try:
+        parsed = parse_time_of_day(value)
+    except ValueError:
+        return False
     return parsed.minute % 15 == 0 and parsed.second == 0 and parsed.microsecond == 0

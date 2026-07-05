@@ -24,6 +24,14 @@ type Booking = {
   eventTypeTitle: string;
 };
 
+type DevEmail = {
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+  createdAt: string;
+};
+
 test.describe.configure({ mode: "serial" });
 
 test("TC-EVENT-005: guest sees booking unavailable state when no event types exist", async ({ page }) => {
@@ -44,8 +52,9 @@ test("TC-AUTH-002: admin login rejects invalid credentials", async ({ page }) =>
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
-test("TC-AUTH-001, TC-EVENT-001/002/008: admin signs in, validates, creates and deletes event type", async ({ page }) => {
+test("TC-AUTH-001, TC-EVENT-001/002/006/008: admin signs in, validates, creates, edits and deletes event type", async ({ page }) => {
   const title = uniqueName("E2E Strategy Call");
+  const updatedTitle = uniqueName("E2E Updated Strategy Call");
   const description = "Automation-created event type";
 
   await signInAsAdmin(page);
@@ -63,8 +72,17 @@ test("TC-AUTH-001, TC-EVENT-001/002/008: admin signs in, validates, creates and 
   await expect(card).toContainText(description);
   await expect(card).toContainText(/45 min \/ (blue|green|yellow|orange|purple|red)/);
 
-  await card.getByRole("button", { name: "Delete" }).click();
-  await expect(page.getByText(title)).toBeHidden();
+  await card.getByRole("button", { name: "Edit" }).click();
+  await page.getByLabel("Title").fill(updatedTitle);
+  await page.getByLabel("Duration").selectOption("15");
+  await page.getByRole("button", { name: "Save event type" }).click();
+
+  const updatedCard = eventTypeCard(page, updatedTitle);
+  await expect(updatedCard).toContainText(description);
+  await expect(updatedCard).toContainText(/15 min \/ (blue|green|yellow|orange|purple|red)/);
+
+  await updatedCard.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByText(updatedTitle)).toBeHidden();
 });
 
 test("TC-EVENT-004: guest sees public event type details", async ({ page, request }) => {
@@ -77,6 +95,8 @@ test("TC-EVENT-004: guest sees public event type details", async ({ page, reques
   await page.goto("/");
 
   await expect(page.getByLabel("Event type")).toContainText(`${eventType.title} - 30 min`);
+  await page.getByLabel("Event type").selectOption(eventType.id);
+  await expect(page.getByText("Public event type description")).toBeVisible();
   await expect(page.getByText("Booking is not available yet.")).toBeHidden();
 });
 
@@ -85,9 +105,31 @@ test("TC-AVAIL-001: admin sees default availability settings", async ({ page }) 
   await page.goto("/admin/availability");
 
   await expect(page.getByRole("heading", { name: "Availability" })).toBeVisible();
-  await expect(page.getByText("monday, tuesday, wednesday, thursday, friday")).toBeVisible();
-  await expect(page.getByText("09:00")).toBeVisible();
-  await expect(page.getByText("18:00")).toBeVisible();
+  for (const day of ["monday", "tuesday", "wednesday", "thursday", "friday"]) {
+    await expect(page.getByLabel(day)).toBeChecked();
+  }
+  await expect(page.getByLabel("Start")).toHaveValue("09:00");
+  await expect(page.getByLabel("End")).toHaveValue("18:00");
+});
+
+test("TC-AVAIL-002/003: admin validates and updates availability", async ({ page }) => {
+  await authorizeAdmin(page);
+  await page.goto("/admin/availability");
+
+  await page.getByLabel("End").selectOption("09:00");
+  await page.getByRole("button", { name: "Save availability" }).click();
+  await expect(page.getByText("End time must be later than start time")).toBeVisible();
+
+  await page.getByLabel("saturday").check();
+  await page.getByLabel("Start").selectOption("10:00");
+  await page.getByLabel("End").selectOption("17:00");
+  await page.getByRole("button", { name: "Save availability" }).click();
+  await expect(page.getByText("Availability saved")).toBeVisible();
+
+  await page.getByLabel("saturday").uncheck();
+  await page.getByLabel("Start").selectOption("09:00");
+  await page.getByLabel("End").selectOption("18:00");
+  await page.getByRole("button", { name: "Save availability" }).click();
 });
 
 test("TC-ADMIN-BOOK-001/002/005: admin sees booking details and deletes booking without email code", async ({ page, request }) => {
@@ -131,6 +173,72 @@ test("TC-CAL-005/007: guest overview shows occupied slots without private guest 
   await expect(page.getByText(booking.guestName)).toBeHidden();
   await expect(page.getByText(booking.guestEmail)).toBeHidden();
   await expect(page.getByText(booking.comment!)).toBeHidden();
+});
+
+test("TC-CAL-002/006, TC-BOOK-001/002, TC-EMAIL-001: guest navigates calendar and creates booking", async ({ page, request }) => {
+  const eventType = await createEventType(request, {
+    title: uniqueName("E2E Bookable Event"),
+    description: "Bookable event description",
+    durationMinutes: 30,
+  });
+  const bookingTitle = uniqueName("E2E Guest Booking");
+
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "Previous week" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Next week" })).toBeEnabled();
+  await page.getByRole("button", { name: "Next week" }).click();
+  await expect(page.getByRole("button", { name: "Next week" })).toBeDisabled();
+  await page.getByRole("button", { name: "Previous week" }).click();
+
+  await page.getByLabel("Event type").selectOption(eventType.id);
+  await page.getByRole("button").filter({ hasText: "free" }).first().click();
+  await page.getByLabel("Booking title").fill(bookingTitle);
+  await page.getByLabel("Guest name").fill("E2E Guest Creator");
+  await page.getByLabel("Guest email").fill("creator@example.com");
+  await page.getByRole("button", { name: "Create booking" }).click();
+
+  await expect(calendarSlotCard(page, bookingTitle)).toContainText("occupied");
+
+  await page.goto("/dev/emails");
+  await expect(page.getByText(`Booking confirmed: ${bookingTitle}`)).toBeVisible();
+  await expect(page.getByText("creator@example.com")).toBeVisible();
+});
+
+test("TC-DEL-001/002/003/004/005, TC-EMAIL-002: guest requests code and deletes booking", async ({ page, request }) => {
+  const eventType = await createEventType(request, { title: uniqueName("E2E Deletable Event") });
+  const booking = await createBooking(request, eventType.id, nextBookableStartAt(13), {
+    title: uniqueName("E2E Guest Delete Booking"),
+    guestEmail: "delete-me@example.com",
+  });
+
+  await page.goto("/");
+  await calendarSlotCard(page, booking.title).click();
+  await page.getByLabel("Booking email").fill("other@example.com");
+  await page.getByRole("button", { name: "Request deletion code" }).click();
+  await expect(page.getByText("If booking exists, a deletion code was sent")).toBeVisible();
+
+  await page.getByLabel("Booking email").fill("delete-me@example.com");
+  await page.getByRole("button", { name: "Request deletion code" }).click();
+  await expect(page.getByText("If booking exists, a deletion code was sent")).toBeVisible();
+
+  await page.getByLabel("Deletion code").fill("111111");
+  await page.getByRole("button", { name: "Delete booking", exact: true }).click();
+  await expect(page.getByText("Invalid deletion code")).toBeVisible();
+
+  await page.getByLabel("Booking email").fill("other@example.com");
+  await page.getByLabel("Deletion code").fill("000000");
+  await page.getByRole("button", { name: "Delete booking", exact: true }).click();
+  await expect(page.getByText("Invalid deletion code")).toBeVisible();
+
+  await page.getByLabel("Booking email").fill("delete-me@example.com");
+  await page.getByLabel("Deletion code").fill("000000");
+  await page.getByRole("button", { name: "Delete booking", exact: true }).click();
+  await page.reload();
+  await expect(page.getByText(booking.title)).toBeHidden();
+
+  await page.goto("/dev/emails");
+  await expect(page.getByRole("heading", { name: "Booking deletion code" }).first()).toBeVisible();
+  await expect(page.getByText("Your booking deletion code is 000000")).toBeVisible();
 });
 
 test("TC-EVENT-009: admin cannot delete event type with a future booking", async ({ page, request }) => {
@@ -209,15 +317,15 @@ async function createBooking(
 }
 
 function eventTypeCard(page: Page, title: string): Locator {
-  return page.locator("div.rounded-xl").filter({ hasText: title }).first();
+  return page.locator(".rounded-xl").filter({ hasText: title }).first();
 }
 
 function bookingCard(page: Page, title: string): Locator {
-  return page.locator("div.rounded-xl").filter({ hasText: title }).first();
+  return page.locator(".rounded-xl").filter({ hasText: title }).first();
 }
 
 function calendarSlotCard(page: Page, title: string): Locator {
-  return page.locator("div.rounded-xl").filter({ hasText: title }).first();
+  return page.locator(".rounded-xl").filter({ hasText: title }).first();
 }
 
 function adminHeaders() {
@@ -228,7 +336,7 @@ function uniqueName(prefix: string) {
   return `${prefix} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function nextBookableStartAt(hour: 10 | 11 | 12) {
+function nextBookableStartAt(hour: number) {
   const now = moscowNowParts();
 
   for (let offset = 0; offset < 14; offset += 1) {

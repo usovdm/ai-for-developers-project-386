@@ -32,6 +32,20 @@ export function useCreateEventTypeMutation() {
   });
 }
 
+export function useUpdateEventTypeMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ eventTypeId, values }: { eventTypeId: string; values: Parameters<typeof eventTypesApi.update>[1] }) =>
+      eventTypesApi.update(eventTypeId, values),
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: eventTypeQueryKeys.adminList });
+      void queryClient.invalidateQueries({ queryKey: eventTypeQueryKeys.publicList });
+      void queryClient.invalidateQueries({ queryKey: ["calendar", "slots"] });
+    },
+  });
+}
+
 export function useDeleteEventTypeMutation() {
   const queryClient = useQueryClient();
 

@@ -1,10 +1,12 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { eventTypeFormSchema, type EventTypeFormValues } from "@/features/event-types/schemas";
 import {
   useAdminEventTypesQuery,
   useCreateEventTypeMutation,
   useDeleteEventTypeMutation,
+  useUpdateEventTypeMutation,
 } from "@/features/event-types/queries";
 import { getErrorMessage } from "@/shared/api";
 import { Button } from "@/shared/ui/button";
@@ -16,6 +18,8 @@ export function AdminEventTypesPage() {
   const eventTypesQuery = useAdminEventTypesQuery();
   const createMutation = useCreateEventTypeMutation();
   const deleteMutation = useDeleteEventTypeMutation();
+  const updateMutation = useUpdateEventTypeMutation();
+  const [editingId, setEditingId] = useState<string | null>(null);
   const form = useForm<EventTypeFormValues>({
     resolver: zodResolver(eventTypeFormSchema),
     defaultValues: {
@@ -26,8 +30,27 @@ export function AdminEventTypesPage() {
   });
 
   async function onSubmit(values: EventTypeFormValues) {
-    await createMutation.mutateAsync(values);
+    if (editingId) {
+      await updateMutation.mutateAsync({ eventTypeId: editingId, values });
+      setEditingId(null);
+    } else {
+      await createMutation.mutateAsync(values);
+    }
     form.reset();
+  }
+
+  function startEditing(eventType: EventTypeFormValues & { id: string }) {
+    setEditingId(eventType.id);
+    form.reset({
+      title: eventType.title,
+      description: eventType.description,
+      durationMinutes: eventType.durationMinutes,
+    });
+  }
+
+  function cancelEditing() {
+    setEditingId(null);
+    form.reset({ title: "", description: "", durationMinutes: 30 });
   }
 
   return (
@@ -74,10 +97,16 @@ export function AdminEventTypesPage() {
             </div>
 
             {createMutation.isError ? <p className="text-sm text-red-600">{getErrorMessage(createMutation.error)}</p> : null}
+            {updateMutation.isError ? <p className="text-sm text-red-600">{getErrorMessage(updateMutation.error)}</p> : null}
 
-            <Button type="submit" disabled={createMutation.isPending}>
-              Create event type
+            <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+              {editingId ? "Save event type" : "Create event type"}
             </Button>
+            {editingId ? (
+              <Button className="ml-2" type="button" variant="secondary" onClick={cancelEditing}>
+                Cancel
+              </Button>
+            ) : null}
           </form>
         </Card>
       </div>
@@ -95,9 +124,14 @@ export function AdminEventTypesPage() {
                   {eventType.durationMinutes} min / {eventType.color}
                 </p>
               </div>
-              <Button variant="danger" onClick={() => deleteMutation.mutate(eventType.id)}>
-                Delete
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="secondary" onClick={() => startEditing(eventType)}>
+                  Edit
+                </Button>
+                <Button variant="danger" onClick={() => deleteMutation.mutate(eventType.id)}>
+                  Delete
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
