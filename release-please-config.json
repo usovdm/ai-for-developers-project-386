@@ -1,0 +1,12 @@
+{
+  "packages": {
+    "backend": {
+      "release-type": "python",
+      "package-name": "meeting-booking-backend"
+    },
+    "frontend": {
+      "release-type": "node",
+      "package-name": "meeting-booking-frontend"
+    }
+  }
+}

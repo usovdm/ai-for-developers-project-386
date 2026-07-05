@@ -30,3 +30,15 @@
 - Booking creation must re-check availability and reject any overlapping interval across all event types, not just equal start times.
 - Guest booking deletion requires an email code; the dev code is `000000`. Admin deletion does not require the code.
 - The generated Hexlet workflow `.github/workflows/hexlet-check.yml` explicitly says not to edit or delete it.
+
+## Commits
+- Use Conventional Commits for all commits, including commits created by agents.
+- Format: `<type>[optional scope][!]: <description>`.
+- Keep the description short, lowercase, and imperative where possible.
+- Use `feat:` for user-visible features; this produces a minor release in release-please.
+- Use `fix:` for bug fixes; this produces a patch release in release-please.
+- Use `feat!:` or a `BREAKING CHANGE:` footer for breaking changes; this produces a major release in release-please.
+- Use non-release types for changes that should not create a release entry: `docs:`, `test:`, `refactor:`, `chore:`, `ci:`, `build:`, `style:`.
+- Prefer scopes when they clarify the changed area: `frontend`, `backend`, `api`, `ci`, `docs`.
+- Agent commits must not use vague messages like `Update files`, `Fix stuff`, or `WIP`.
+- Examples: `feat(frontend): add booking calendar`, `fix(backend): reject overlapping bookings`, `ci: add release-please workflow`, `docs: describe commit format`.
