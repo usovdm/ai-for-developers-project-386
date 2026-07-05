@@ -24,6 +24,25 @@ export function useCreateBookingMutation() {
   });
 }
 
+export function useRequestDeletionCodeMutation() {
+  return useMutation({
+    mutationFn: ({ bookingId, guestEmail }: { bookingId: string; guestEmail: string }) =>
+      bookingsApi.requestDeletionCode(bookingId, { guestEmail }),
+  });
+}
+
+export function useDeleteBookingAsGuestMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ bookingId, guestEmail, code }: { bookingId: string; guestEmail: string; code: string }) =>
+      bookingsApi.deleteAsGuest(bookingId, { guestEmail, code }),
+    onSuccess() {
+      void queryClient.invalidateQueries({ queryKey: ["calendar", "slots"] });
+    },
+  });
+}
+
 export function useDeleteBookingAsAdminMutation() {
   const queryClient = useQueryClient();
 

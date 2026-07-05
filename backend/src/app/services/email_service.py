@@ -34,6 +34,10 @@ def request_deletion_code(
         )
         session.commit()
 
+        from app.services.dev_email_service import send_deletion_code
+
+        send_deletion_code(session, request.guest_email, DEV_DELETION_CODE)
+
     return DeletionCodeRequested(message="If booking exists, a deletion code was sent")
 
 

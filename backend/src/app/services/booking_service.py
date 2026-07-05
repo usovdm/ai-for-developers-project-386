@@ -94,7 +94,12 @@ def create_booking(session: Session, request: CreateBookingRequest) -> Booking:
     session.add(model)
     session.commit()
     session.refresh(model)
-    return _to_schema(model)
+    booking = _to_schema(model)
+
+    from app.services.dev_email_service import send_booking_confirmation
+
+    send_booking_confirmation(session, booking)
+    return booking
 
 
 def list_upcoming_bookings(session: Session) -> List[Booking]:

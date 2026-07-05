@@ -48,3 +48,13 @@ class EmailCodeModel(SQLModel, table=True):
     created_at: datetime
     expires_at: datetime
     consumed_at: Optional[datetime] = None
+
+
+class DevEmailModel(SQLModel, table=True):
+    __tablename__ = "dev_emails"
+
+    id: str = Field(primary_key=True)
+    recipient_email: str = Field(index=True)
+    subject: str
+    body: str
+    created_at: datetime = Field(index=True)

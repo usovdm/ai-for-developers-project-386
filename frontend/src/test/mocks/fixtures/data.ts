@@ -1,5 +1,5 @@
 import { addMinutes, setHours, setMinutes, startOfToday } from "date-fns";
-import type { AvailabilitySettings, Booking, CalendarSlot, EventType } from "@/shared/api";
+import type { AvailabilitySettings, Booking, CalendarSlot, DevEmail, EventType } from "@/shared/api";
 
 export const eventTypes: EventType[] = [
   {
@@ -40,6 +40,8 @@ export const bookings: Booking[] = [
     createdAt: new Date().toISOString(),
   },
 ];
+
+export const devEmails: DevEmail[] = [];
 
 export function setAvailabilitySettings(nextSettings: AvailabilitySettings) {
   availabilitySettings = nextSettings;

@@ -56,5 +56,68 @@ def open_availability(client, admin_headers):
     assert response.status_code == 200
 
 
-def future_start_at():
-    return (datetime.now() + timedelta(days=1)).replace(hour=10, minute=0, second=0, microsecond=0)
+def future_start_at(hour=10, minute=0, days=1):
+    return (datetime.now() + timedelta(days=days)).replace(
+        hour=hour,
+        minute=minute,
+        second=0,
+        microsecond=0,
+    )
+
+
+def create_event_type(client, admin_headers, title="Intro call", duration_minutes=30):
+    response = client.post(
+        "/admin/event-types",
+        headers=admin_headers,
+        json={
+            "title": title,
+            "description": "Short introduction meeting",
+            "durationMinutes": duration_minutes,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def create_booking(
+    client,
+    event_type_id,
+    start_at,
+    title="Project discussion",
+    guest_email="guest@example.com",
+):
+    response = client.post(
+        "/bookings",
+        json={
+            "eventTypeId": event_type_id,
+            "startAt": start_at.isoformat(),
+            "title": title,
+            "guestName": "Guest",
+            "guestEmail": guest_email,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()
+
+
+def set_availability(client, admin_headers, work_days=None, start_time="00:00", end_time="23:45"):
+    response = client.put(
+        "/admin/availability",
+        headers=admin_headers,
+        json={
+            "workDays": work_days
+            or [
+                "monday",
+                "tuesday",
+                "wednesday",
+                "thursday",
+                "friday",
+                "saturday",
+                "sunday",
+            ],
+            "startTime": start_time,
+            "endTime": end_time,
+        },
+    )
+    assert response.status_code == 200
+    return response.json()

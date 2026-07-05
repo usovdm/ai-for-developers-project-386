@@ -218,6 +218,15 @@ model AdminSession {
   expiresAt?: DateTime;
 }
 
+@doc("Email captured in local dev outbox. This is a development/testing interface, not a real email provider.")
+model DevEmail {
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  body: string;
+  createdAt: DateTime;
+}
+
 @tag("Guest")
 @route("/event-types")
 @get
@@ -341,3 +350,9 @@ op deleteBookingAsAdmin(
   ...AdminAuthHeader,
   @path bookingId: string,
 ): NoContentResponse | UnauthorizedErrorResponse | NotFoundErrorResponse;
+
+@tag("Dev")
+@route("/dev/emails")
+@get
+@doc("Returns local dev emails for testing booking confirmations and deletion codes.")
+op listDevEmails(): DevEmail[];
