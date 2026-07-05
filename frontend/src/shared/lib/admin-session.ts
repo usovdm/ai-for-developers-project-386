@@ -4,6 +4,10 @@ export function getAdminToken() {
   return window.localStorage.getItem(ADMIN_TOKEN_KEY);
 }
 
+export function hasAdminToken() {
+  return getAdminToken() !== null;
+}
+
 export function saveAdminToken(token: string) {
   window.localStorage.setItem(ADMIN_TOKEN_KEY, token);
 }
