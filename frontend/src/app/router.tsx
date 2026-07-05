@@ -1,12 +1,16 @@
-import { Link, Outlet, createRootRoute, createRoute, createRouter } from "@tanstack/react-router";
+import { Link, Outlet, createRootRoute, createRoute, createRouter, redirect, useRouterState } from "@tanstack/react-router";
 import { AdminAvailabilityPage } from "@/pages/admin-availability";
 import { AdminBookingsPage } from "@/pages/admin-bookings";
 import { AdminEventTypesPage } from "@/pages/admin-event-types";
 import { AdminLoginPage } from "@/pages/admin-login";
 import { DevEmailsPage } from "@/pages/dev-emails";
 import { GuestCalendarPage } from "@/pages/guest-calendar";
+import { hasAdminToken } from "@/shared/lib/admin-session";
 
 function RootLayout() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const isAdminSection = pathname.startsWith("/admin/") && hasAdminToken();
+
   return (
     <div className="min-h-screen bg-slate-50">
       <header className="border-b bg-white">
@@ -17,18 +21,19 @@ function RootLayout() {
           <Link to="/admin" activeProps={{ className: "text-blue-600" }}>
             Admin
           </Link>
-          <Link to="/admin/event-types" activeProps={{ className: "text-blue-600" }}>
-            Event types
-          </Link>
-          <Link to="/admin/availability" activeProps={{ className: "text-blue-600" }}>
-            Availability
-          </Link>
-          <Link to="/admin/bookings" activeProps={{ className: "text-blue-600" }}>
-            Bookings
-          </Link>
-          <Link to="/dev/emails" activeProps={{ className: "text-blue-600" }}>
-            Dev emails
-          </Link>
+          {isAdminSection ? (
+            <>
+              <Link to="/admin/event-types" activeProps={{ className: "text-blue-600" }}>
+                Event types
+              </Link>
+              <Link to="/admin/availability" activeProps={{ className: "text-blue-600" }}>
+                Availability
+              </Link>
+              <Link to="/admin/bookings" activeProps={{ className: "text-blue-600" }}>
+                Bookings
+              </Link>
+            </>
+          ) : null}
         </nav>
       </header>
       <main className="mx-auto max-w-6xl px-4 py-8">
@@ -52,21 +57,30 @@ const adminLoginRoute = createRoute({
   component: AdminLoginPage,
 });
 
+function requireAdminToken() {
+  if (!hasAdminToken()) {
+    throw redirect({ to: "/admin" });
+  }
+}
+
 const adminEventTypesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/event-types",
+  beforeLoad: requireAdminToken,
   component: AdminEventTypesPage,
 });
 
 const adminAvailabilityRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/availability",
+  beforeLoad: requireAdminToken,
   component: AdminAvailabilityPage,
 });
 
 const adminBookingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin/bookings",
+  beforeLoad: requireAdminToken,
   component: AdminBookingsPage,
 });
 

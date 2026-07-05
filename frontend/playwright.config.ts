@@ -4,6 +4,7 @@ const frontendPort = 4174;
 const backendPort = 3100;
 const frontendUrl = `http://127.0.0.1:${frontendPort}`;
 const backendUrl = `http://127.0.0.1:${backendPort}`;
+const frontendOrigins = `http://127.0.0.1:${frontendPort},http://localhost:${frontendPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -25,6 +26,7 @@ export default defineConfig({
       env: {
         APP_DATABASE_URL: "sqlite:///./.data/e2e.db",
         APP_FRONTEND_ORIGIN: frontendUrl,
+        APP_FRONTEND_ORIGINS: frontendOrigins,
       },
       url: `${backendUrl}/event-types`,
       timeout: 30_000,
@@ -33,6 +35,7 @@ export default defineConfig({
     {
       command: `npm run dev -- --host 127.0.0.1 --port ${frontendPort}`,
       env: {
+        E2E_FRONTEND_BASE_URL: frontendUrl,
         VITE_API_BASE_URL: backendUrl,
       },
       url: frontendUrl,

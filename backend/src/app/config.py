@@ -7,6 +7,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./.data/app.db"
     frontend_origin: str = "http://localhost:5173"
+    frontend_origins: str = ""
     admin_login: str = "admin"
     admin_password: str = "admin"
     admin_token: str = "dev-admin-token"
@@ -18,6 +19,16 @@ class Settings(BaseSettings):
     @property
     def tzinfo(self) -> ZoneInfo:
         return ZoneInfo(self.timezone)
+
+    @property
+    def cors_origins(self) -> list[str]:
+        if self.frontend_origins:
+            return [origin.strip() for origin in self.frontend_origins.split(",") if origin.strip()]
+
+        origins = [self.frontend_origin]
+        if self.frontend_origin == "http://localhost:5173":
+            origins.append("http://127.0.0.1:5173")
+        return origins
 
 
 @lru_cache

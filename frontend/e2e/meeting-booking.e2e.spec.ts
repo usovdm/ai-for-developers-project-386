@@ -1,9 +1,11 @@
 import { expect, test, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 
 const apiBaseUrl = process.env.E2E_API_BASE_URL ?? "http://127.0.0.1:3100";
+const frontendUrl = process.env.E2E_FRONTEND_BASE_URL ?? "http://127.0.0.1:4174";
 const adminToken = "dev-admin-token";
 const adminTokenStorageKey = "meeting-booking.admin-token";
 const eventTypeColors = ["blue", "green", "yellow", "orange", "purple", "red"];
+const protectedAdminPaths = ["/admin/event-types", "/admin/availability", "/admin/bookings"] as const;
 
 type EventType = {
   id: string;
@@ -42,6 +44,45 @@ test("TC-EVENT-005: guest sees booking unavailable state when no event types exi
   await expect(page.getByLabel("Event type")).toHaveValue("");
 });
 
+test("TC-NAV-001: guest navigation hides admin and dev sections", async ({ page }) => {
+  await page.goto("/");
+
+  const navigation = page.getByRole("navigation");
+  await expect(navigation.getByRole("link", { name: "Meeting Booking" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Admin" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Event types" })).toBeHidden();
+  await expect(navigation.getByRole("link", { name: "Availability" })).toBeHidden();
+  await expect(navigation.getByRole("link", { name: "Bookings" })).toBeHidden();
+  await expect(navigation.getByRole("link", { name: "Dev emails" })).toBeHidden();
+});
+
+test("TC-AUTH-004: protected admin pages redirect unauthenticated users to login", async ({ page }) => {
+  for (const path of protectedAdminPaths) {
+    await page.goto(path);
+
+    await expect(page).toHaveURL(/\/admin$/);
+    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Create event type" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Save availability" })).toBeHidden();
+    await expect(page.getByRole("heading", { name: "Upcoming bookings" })).toBeHidden();
+  }
+});
+
+test("TC-CORS-001: backend allows localhost and 127.0.0.1 frontend origins", async ({ request }) => {
+  for (const origin of frontendCorsOrigins()) {
+    const response = await request.fetch(`${apiBaseUrl}/event-types`, {
+      method: "OPTIONS",
+      headers: {
+        Origin: origin,
+        "Access-Control-Request-Method": "GET",
+      },
+    });
+
+    expect(response.status()).toBe(200);
+    expect(response.headers()["access-control-allow-origin"]).toBe(origin);
+  }
+});
+
 test("TC-AUTH-002: admin login rejects invalid credentials", async ({ page }) => {
   await page.goto("/admin");
   await page.getByLabel("Login").fill("wrong-admin");
@@ -50,6 +91,16 @@ test("TC-AUTH-002: admin login rejects invalid credentials", async ({ page }) =>
 
   await expect(page.getByText("Invalid admin credentials")).toBeVisible();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("TC-NAV-002: admin navigation appears after successful sign in", async ({ page }) => {
+  await signInAsAdmin(page);
+
+  const navigation = page.getByRole("navigation");
+  await expect(navigation.getByRole("link", { name: "Event types" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Availability" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Bookings" })).toBeVisible();
+  await expect(navigation.getByRole("link", { name: "Dev emails" })).toBeHidden();
 });
 
 test("TC-AUTH-001, TC-EVENT-001/002/006/008: admin signs in, validates, creates, edits and deletes event type", async ({ page }) => {
@@ -334,6 +385,11 @@ function adminHeaders() {
 
 function uniqueName(prefix: string) {
   return `${prefix} ${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function frontendCorsOrigins() {
+  const url = new URL(frontendUrl);
+  return [`http://127.0.0.1:${url.port}`, `http://localhost:${url.port}`];
 }
 
 function nextBookableStartAt(hour: number) {
