@@ -24,8 +24,6 @@ COPY --from=frontend-builder /app/frontend/dist ./frontend-dist
 
 RUN mkdir -p /app/data
 
-VOLUME ["/app/data"]
-
 EXPOSE 3000
 
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-3000}"]
