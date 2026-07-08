@@ -1,14 +1,19 @@
 from contextlib import asynccontextmanager
+from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.router import api_router
 from app.config import get_settings
 from app.schemas.errors import ApiError, ApiErrorResponse
 from app.storage.database import init_db
+
+
+HTML_FALLBACK_EXCLUDED_PATHS = ("/docs", "/redoc", "/openapi.json")
 
 
 @asynccontextmanager
@@ -54,7 +59,45 @@ def create_app() -> FastAPI:
         )
 
     app.include_router(api_router)
+    mount_frontend(app, settings.static_dir)
     return app
+
+
+def mount_frontend(app: FastAPI, static_dir: str) -> None:
+    if not static_dir:
+        return
+
+    dist_dir = Path(static_dir).resolve()
+    index_path = dist_dir / "index.html"
+    if not index_path.is_file():
+        return
+
+    assets_dir = dist_dir / "assets"
+    if assets_dir.is_dir():
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="frontend-assets")
+
+    @app.middleware("http")
+    async def frontend_html_fallback(request: Request, call_next):
+        accepts_html = "text/html" in request.headers.get("accept", "")
+        is_html_navigation = request.method in {"GET", "HEAD"} and accepts_html
+        is_docs_path = request.url.path.startswith(HTML_FALLBACK_EXCLUDED_PATHS)
+
+        if is_html_navigation and not is_docs_path:
+            return FileResponse(index_path)
+
+        return await call_next(request)
+
+    @app.get("/{static_path:path}", include_in_schema=False)
+    def get_frontend_file(static_path: str):
+        requested_path = (dist_dir / static_path).resolve()
+        if dist_dir == requested_path or dist_dir in requested_path.parents:
+            if requested_path.is_file():
+                return FileResponse(requested_path)
+
+        if static_path == "":
+            return FileResponse(index_path)
+
+        raise HTTPException(status_code=404, detail="Not found")
 
 
 app = create_app()
