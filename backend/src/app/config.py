@@ -6,6 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     database_url: str = "sqlite:///./.data/app.db"
+    static_dir: str = ""
     frontend_origin: str = "http://localhost:5173"
     frontend_origins: str = ""
     admin_login: str = "admin"
